@@ -6,7 +6,17 @@ use nalgebra as na;
 
 use nalgebra::{DMatrix, DVector, Matrix, Unit};
 
-use wasm_bindgen::prelude::*;
+// use futures_executor::LocalPool;
+
+use wasm_bindgen::{prelude::*, JsCast};
+
+use web_sys::HtmlCanvasElement;
+
+macro_rules! log {
+    ( $( $t:tt )*) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
 
 fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
     assert!(dim > 0 && a < dim && b < dim && a != b);
@@ -53,6 +63,36 @@ pub struct AnimState {
     plaintext: DMatrix<f32>,
     current_matrix: DMatrix<f32>,
     pub current_index: usize,
+    image_data: Vec<u8>,
+}
+
+// fn render_image_mut(data: &DMatrix<f32>, buf: &mut [u8]) {
+//     buf.
+//     for col in 0..data.ncols() {
+//         for row in 0..data.nrows() {
+//             let val = (data[(row, col)] * 255.0).floor() as u8;
+//             result.push(val);
+//             result.push(val);
+//             result.push(val);
+//             result.push(255);
+//         }
+//     }
+// }
+
+fn render_image(data: &DMatrix<f32>) -> Vec<u8> {
+    let mut result = Vec::with_capacity(data.len() * 4);
+
+    for col in 0..data.ncols() {
+        for row in 0..data.nrows() {
+            let val = (data[(row, col)] * 255.0).floor() as u8;
+            result.push(val);
+            result.push(val);
+            result.push(val);
+            result.push(255);
+        }
+    }
+
+    result
 }
 
 #[wasm_bindgen]
@@ -67,12 +107,15 @@ impl AnimState {
             height: rows,
         };
 
+        let image_data = render_image(&current_matrix);
+
         AnimState {
             keys,
             size,
             plaintext,
             current_matrix,
             current_index,
+            image_data,
         }
     }
 
@@ -84,20 +127,26 @@ impl AnimState {
             let i = self.current_index;
             self.current_matrix = &self.keys[i] * &self.current_matrix;
             self.current_index += 1;
+            self.image_data = render_image(&self.current_matrix);
         }
     }
 
     pub fn prev_step(&mut self) {
         if self.current_index > 0 {
-            let i = self.current_index;
-            let inv = self.keys[i - 1].clone().try_inverse().unwrap();
-            self.current_matrix = inv * &self.current_matrix;
             self.current_index -= 1;
+            let i = self.current_index;
+            let inv = self.keys[i].clone().try_inverse().unwrap();
+            self.current_matrix = inv * &self.current_matrix;
+            self.image_data = render_image(&self.current_matrix);
         }
     }
 
     pub fn size(&self) -> Size {
         self.size.clone()
+    }
+
+    pub fn image_data(&self) -> *const u8 {
+        self.image_data.as_slice().as_ptr()
     }
 
     pub fn plaintext(&self) -> *const f32 {
