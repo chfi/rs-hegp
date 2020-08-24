@@ -66,32 +66,21 @@ pub struct AnimState {
     image_data: Vec<u8>,
 }
 
-// fn render_image_mut(data: &DMatrix<f32>, buf: &mut [u8]) {
-//     buf.
-//     for col in 0..data.ncols() {
-//         for row in 0..data.nrows() {
-//             let val = (data[(row, col)] * 255.0).floor() as u8;
-//             result.push(val);
-//             result.push(val);
-//             result.push(val);
-//             result.push(255);
-//         }
-//     }
-// }
+fn render_image_mut(data: &DMatrix<f32>, buf: &mut Vec<u8>) {
+    assert!(buf.len() == data.len() * 4);
+    for (i, val) in data.iter().enumerate() {
+        let j = i * 4;
+        let img_val = (val * 255.0).floor() as u8;
+        buf[j] = img_val;
+        buf[j + 1] = img_val;
+        buf[j + 2] = img_val;
+        buf[j + 3] = 255;
+    }
+}
 
 fn render_image(data: &DMatrix<f32>) -> Vec<u8> {
     let mut result = Vec::with_capacity(data.len() * 4);
-
-    for col in 0..data.ncols() {
-        for row in 0..data.nrows() {
-            let val = (data[(row, col)] * 255.0).floor() as u8;
-            result.push(val);
-            result.push(val);
-            result.push(val);
-            result.push(255);
-        }
-    }
-
+    render_image_mut(data, &mut result);
     result
 }
 
