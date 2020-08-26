@@ -10,7 +10,7 @@ use nalgebra::{DMatrix, DVector, Matrix, Unit};
 
 use wasm_bindgen::{prelude::*, JsCast};
 
-use web_sys::HtmlCanvasElement;
+use web_sys::{HtmlCanvasElement, ImageData};
 
 macro_rules! log {
     ( $( $t:tt )*) => {
@@ -116,7 +116,7 @@ impl AnimState {
             let i = self.current_index;
             self.current_matrix = &self.keys[i] * &self.current_matrix;
             self.current_index += 1;
-            self.image_data = render_image(&self.current_matrix);
+            render_image_mut(&self.current_matrix, &mut self.image_data);
         }
     }
 
@@ -126,7 +126,7 @@ impl AnimState {
             let i = self.current_index;
             let inv = self.keys[i].clone().try_inverse().unwrap();
             self.current_matrix = inv * &self.current_matrix;
-            self.image_data = render_image(&self.current_matrix);
+            render_image_mut(&self.current_matrix, &mut self.image_data);
         }
     }
 
@@ -138,8 +138,16 @@ impl AnimState {
         self.image_data.as_slice().as_ptr()
     }
 
+    pub fn image_data_len(&self) -> usize {
+        self.image_data.len()
+    }
+
     pub fn plaintext(&self) -> *const f32 {
         self.plaintext.as_slice().as_ptr()
+    }
+
+    pub fn plaintext_len(&self) -> usize {
+        self.plaintext.len()
     }
 
     pub fn current_matrix(&self) -> *const f32 {
