@@ -9,6 +9,35 @@ use wasm_bindgen::{prelude::*, JsCast};
 
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
+use colorous::{Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS, WARM};
+
+static GRADIENT_NAMES: [&'static str; 9] = [
+    "CIVIDIS",
+    "COOL",
+    "CUBEHELIX",
+    "INFERNO",
+    "MAGMA",
+    "PLASMA",
+    "TURBO",
+    "VIRIDIS",
+    "WARM",
+];
+
+fn pick_gradient(name: &str) -> Option<Gradient> {
+    match name {
+        "CIVIDIS" => Some(CIVIDIS),
+        "COOL" => Some(COOL),
+        "CUBEHELIX" => Some(CUBEHELIX),
+        "INFERNO" => Some(INFERNO),
+        "MAGMA" => Some(MAGMA),
+        "PLASMA" => Some(PLASMA),
+        "TURBO" => Some(TURBO),
+        "VIRIDIS" => Some(VIRIDIS),
+        "WARM" => Some(WARM),
+        _ => None,
+    }
+}
+
 macro_rules! log {
     ( $( $t:tt )*) => {
         web_sys::console::log_1(&format!( $( $t )* ).into());
@@ -77,23 +106,25 @@ pub struct AnimState {
     current_matrix: DMatrix<f32>,
     pub current_index: usize,
     image_data: Vec<u8>,
+    gradient: String,
 }
 
-fn render_image_mut(data: &DMatrix<f32>, buf: &mut Vec<u8>) {
+fn render_image_mut(gradient: &Gradient, data: &DMatrix<f32>, buf: &mut Vec<u8>) {
     assert!(buf.len() == data.len() * 4);
     for (i, val) in data.iter().enumerate() {
         let j = i * 4;
-        let img_val = (val * 255.0).floor() as u8;
-        buf[j] = img_val;
-        buf[j + 1] = img_val;
-        buf[j + 2] = img_val;
+        // let t: colorous::Gradient = TURBO;
+        let color = gradient.eval_continuous(*val as f64);
+        buf[j] = color.r;
+        buf[j + 1] = color.g;
+        buf[j + 2] = color.b;
         buf[j + 3] = 255;
     }
 }
 
-fn render_image(data: &DMatrix<f32>) -> Vec<u8> {
+fn render_image(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
     let mut result = vec![0; data.len() * 4];
-    render_image_mut(data, &mut result);
+    render_image_mut(gradient, data, &mut result);
     result
 }
 
@@ -109,7 +140,9 @@ impl AnimState {
             height: rows,
         };
 
-        let image_data = render_image(&current_matrix);
+        let gradient = "TURBO".to_string();
+
+        let image_data = render_image(&TURBO, &current_matrix);
 
         AnimState {
             keys,
@@ -118,6 +151,24 @@ impl AnimState {
             current_matrix,
             current_index,
             image_data,
+            gradient,
+        }
+    }
+
+    fn fetch_gradient(&self) -> Gradient {
+        let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
+            gradient
+        } else {
+            TURBO
+        };
+        gradient
+    }
+
+    pub fn set_gradient(&mut self, name: &str) {
+        if GRADIENT_NAMES.contains(&name) {
+            self.gradient = name.to_string();
+        } else {
+            self.gradient = "TURBO".to_string();
         }
     }
 
@@ -134,7 +185,8 @@ impl AnimState {
             let i = self.current_index;
             self.current_matrix = &self.keys[i] * &self.current_matrix;
             self.current_index += 1;
-            render_image_mut(&self.current_matrix, &mut self.image_data);
+            let gradient = self.fetch_gradient();
+            render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
         }
     }
 
@@ -144,7 +196,8 @@ impl AnimState {
             let i = self.current_index;
             let inv = self.keys[i].clone().try_inverse().unwrap();
             self.current_matrix = inv * &self.current_matrix;
-            render_image_mut(&self.current_matrix, &mut self.image_data);
+            let gradient = self.fetch_gradient();
+            render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
         }
     }
 
