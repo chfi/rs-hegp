@@ -57,6 +57,17 @@ pub struct Size {
 }
 
 #[wasm_bindgen]
+pub fn new_canvas(id: &str, width: usize, height: usize) -> Result<HtmlCanvasElement, JsValue> {
+    let document = web_sys::window().unwrap().document().unwrap();
+    let element = document.create_element("canvas")?;
+    element.set_attribute("id", id)?;
+    element.set_attribute("width", &width.to_string())?;
+    element.set_attribute("height", &height.to_string())?;
+    let canvas = element.dyn_into()?;
+    Ok(canvas)
+}
+
+#[wasm_bindgen]
 pub struct AnimState {
     keys: Vec<DMatrix<f32>>,
     size: Size,
