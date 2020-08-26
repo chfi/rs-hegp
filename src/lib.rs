@@ -7,12 +7,17 @@ use nalgebra::{DMatrix, DVector, Matrix, Unit};
 
 use wasm_bindgen::{prelude::*, JsCast};
 
-use web_sys::{HtmlCanvasElement, ImageData};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 macro_rules! log {
     ( $( $t:tt )*) => {
         web_sys::console::log_1(&format!( $( $t )* ).into());
     }
+}
+
+#[wasm_bindgen(module = "/js/util.js")]
+extern "C" {
+    fn render(img_bytes: &[u8], width: usize, height: usize, ctx: &CanvasRenderingContext2d);
 }
 
 fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
@@ -114,6 +119,11 @@ impl AnimState {
             current_index,
             image_data,
         }
+    }
+
+    pub fn render(&self, ctx: &CanvasRenderingContext2d) {
+        let bytes = self.image_data.as_slice();
+        render(bytes, self.data_size.width, self.data_size.height, ctx);
     }
 
     pub fn next_step(&mut self) {
