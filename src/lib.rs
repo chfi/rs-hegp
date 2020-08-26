@@ -2,11 +2,8 @@ mod utils;
 
 use rand::prelude::*;
 
-use nalgebra as na;
-
+// use nalgebra as na;
 use nalgebra::{DMatrix, DVector, Matrix, Unit};
-
-// use futures_executor::LocalPool;
 
 use wasm_bindgen::{prelude::*, JsCast};
 
@@ -70,7 +67,7 @@ pub fn new_canvas(id: &str, width: usize, height: usize) -> Result<HtmlCanvasEle
 #[wasm_bindgen]
 pub struct AnimState {
     keys: Vec<DMatrix<f32>>,
-    size: Size,
+    data_size: Size,
     plaintext: DMatrix<f32>,
     current_matrix: DMatrix<f32>,
     pub current_index: usize,
@@ -78,14 +75,10 @@ pub struct AnimState {
 }
 
 fn render_image_mut(data: &DMatrix<f32>, buf: &mut Vec<u8>) {
-    log!("before assert: {} == {}", buf.len(), data.len() * 4);
     assert!(buf.len() == data.len() * 4);
-    log!("after assert");
     for (i, val) in data.iter().enumerate() {
         let j = i * 4;
-        // log!("converting to u8");
         let img_val = (val * 255.0).floor() as u8;
-        // log!("setting values");
         buf[j] = img_val;
         buf[j + 1] = img_val;
         buf[j + 2] = img_val;
@@ -94,8 +87,6 @@ fn render_image_mut(data: &DMatrix<f32>, buf: &mut Vec<u8>) {
 }
 
 fn render_image(data: &DMatrix<f32>) -> Vec<u8> {
-    log!("creating vector");
-    // let mut result = Vec::with_capacity(data.len() * 4);
     let mut result = vec![0; data.len() * 4];
     render_image_mut(data, &mut result);
     result
@@ -104,24 +95,20 @@ fn render_image(data: &DMatrix<f32>) -> Vec<u8> {
 #[wasm_bindgen]
 impl AnimState {
     pub fn init(rows: usize, cols: usize, num_keys: usize) -> Self {
-        log!("generating keys");
         let keys = gen_key_series(rows, num_keys);
-        log!("generating plaintext");
         let plaintext = gen_plaintext(rows, cols);
-        log!("copying plaintext");
         let current_matrix = plaintext.clone();
         let current_index = 0;
-        let size = Size {
+        let data_size = Size {
             width: cols,
             height: rows,
         };
 
-        log!("rendering image data");
         let image_data = render_image(&current_matrix);
 
         AnimState {
             keys,
-            size,
+            data_size,
             plaintext,
             current_matrix,
             current_index,
@@ -151,8 +138,16 @@ impl AnimState {
         }
     }
 
+    pub fn width(&self) -> usize {
+        self.data_size.width
+    }
+
+    pub fn height(&self) -> usize {
+        self.data_size.height
+    }
+
     pub fn size(&self) -> Size {
-        self.size.clone()
+        self.data_size.clone()
     }
 
     pub fn image_data(&self) -> *const u8 {
