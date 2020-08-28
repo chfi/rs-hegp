@@ -98,6 +98,13 @@ pub fn new_canvas(id: &str, width: usize, height: usize) -> Result<HtmlCanvasEle
     Ok(canvas)
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PlayState {
+    PlayForward(i32),
+    Stopped,
+    PlayReverse(i32),
+}
+
 #[wasm_bindgen]
 pub struct AnimState {
     keys: Vec<DMatrix<f32>>,
@@ -107,6 +114,7 @@ pub struct AnimState {
     pub current_index: usize,
     image_data: Vec<u8>,
     gradient: String,
+    play_state: PlayState,
 }
 
 fn render_image_mut(gradient: &Gradient, data: &DMatrix<f32>, buf: &mut Vec<u8>) {
@@ -144,6 +152,8 @@ impl AnimState {
 
         let image_data = render_image(&TURBO, &current_matrix);
 
+        let play_state = PlayState::Stopped;
+
         AnimState {
             keys,
             data_size,
@@ -152,6 +162,7 @@ impl AnimState {
             current_index,
             image_data,
             gradient,
+            play_state,
         }
     }
 
@@ -175,6 +186,14 @@ impl AnimState {
     pub fn render(&self, ctx: &CanvasRenderingContext2d) {
         let bytes = self.image_data.as_slice();
         render(bytes, self.data_size.width, self.data_size.height, ctx);
+    }
+
+    pub fn set_play_state(&mut self, play_state: PlayState) {
+        match play_state {
+            PlayState::Stopped => {}
+            PlayState::PlayForward(cb_id) => {}
+            PlayState::PlayReverse(cb_id) => {}
+        }
     }
 
     pub fn next_step(&mut self) {
