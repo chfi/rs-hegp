@@ -101,8 +101,54 @@ pub fn new_canvas(id: &str, width: usize, height: usize) -> Result<HtmlCanvasEle
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PlayState {
     PlayForward(i32),
-    Stopped,
+    PauseForward,
     PlayReverse(i32),
+    PauseReverse,
+}
+
+impl PlayState {
+    fn is_stopped(&self) -> bool {
+        self == PlayState::PauseForward && self == PlayState::PauseReverse
+    }
+
+    fn is_playing(&self) -> bool {
+        !self.is_stopped()
+    }
+
+    fn callback_id(&self) -> Option<i32> {
+        use PlayState::*;
+        match self {
+            PlayForward(id) => Some(*id),
+            PlayReverse(id) => Some(*id),
+            _ => None,
+        }
+    }
+
+    fn is_forward(&self) -> bool {
+        use PlayState::*;
+        match self {
+            PlayForward(_) => true,
+            PauseForward => true,
+            _ => false,
+        }
+    }
+
+    fn pause(&self) -> Self {
+        use PlayState::*;
+        match self {
+            PlayForward(id) => PauseForward,
+            PlayReverse(id) => PauseReverse,
+            x => *x,
+        }
+    }
+
+    fn play(&self, callback_id: i32) -> Self {
+        if self.is_forward() {
+            PlayState::PlayForward(callback_id)
+        } else {
+            PlayState::PlayReverse(callback_id)
+        }
+    }
 }
 
 #[wasm_bindgen]
@@ -152,7 +198,7 @@ impl AnimState {
 
         let image_data = render_image(&TURBO, &current_matrix);
 
-        let play_state = PlayState::Stopped;
+        let play_state = PlayState::PauseForward;
 
         AnimState {
             keys,
@@ -188,12 +234,14 @@ impl AnimState {
         render(bytes, self.data_size.width, self.data_size.height, ctx);
     }
 
-    pub fn set_play_state(&mut self, play_state: PlayState) {
-        match play_state {
-            PlayState::Stopped => {}
-            PlayState::PlayForward(cb_id) => {}
-            PlayState::PlayReverse(cb_id) => {}
-        }
+    pub fn pause(&mut self) {
+        // TODO handle actually removing the callback
+        if self.play_state.is_playing() {}
+    }
+
+    pub fn play_forward(&mut self) {
+        // TODO handle removing the callback if applicable
+        // TODO add the animation callback
     }
 
     pub fn next_step(&mut self) {
