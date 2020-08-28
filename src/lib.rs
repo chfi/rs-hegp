@@ -9,7 +9,10 @@ use wasm_bindgen::{prelude::*, JsCast};
 
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
-use colorous::{Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS, WARM};
+use colorous::{
+    Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS,
+    WARM,
+};
 
 static GRADIENT_NAMES: [&'static str; 9] = [
     "CIVIDIS",
@@ -46,7 +49,12 @@ macro_rules! log {
 
 #[wasm_bindgen(module = "/js/util.js")]
 extern "C" {
-    fn render(img_bytes: &[u8], width: usize, height: usize, ctx: &CanvasRenderingContext2d);
+    fn render(
+        img_bytes: &[u8],
+        width: usize,
+        height: usize,
+        ctx: &CanvasRenderingContext2d,
+    );
 }
 
 fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
@@ -88,7 +96,11 @@ pub struct Size {
 }
 
 #[wasm_bindgen]
-pub fn new_canvas(id: &str, width: usize, height: usize) -> Result<HtmlCanvasElement, JsValue> {
+pub fn new_canvas(
+    id: &str,
+    width: usize,
+    height: usize,
+) -> Result<HtmlCanvasElement, JsValue> {
     let document = web_sys::window().unwrap().document().unwrap();
     let element = document.create_element("canvas")?;
     element.set_attribute("id", id)?;
@@ -108,7 +120,7 @@ enum PlayState {
 
 impl PlayState {
     fn is_stopped(&self) -> bool {
-        self == PlayState::PauseForward && self == PlayState::PauseReverse
+        *self == PlayState::PauseForward || *self == PlayState::PauseReverse
     }
 
     fn is_playing(&self) -> bool {
@@ -163,7 +175,11 @@ pub struct AnimState {
     play_state: PlayState,
 }
 
-fn render_image_mut(gradient: &Gradient, data: &DMatrix<f32>, buf: &mut Vec<u8>) {
+fn render_image_mut(
+    gradient: &Gradient,
+    data: &DMatrix<f32>,
+    buf: &mut Vec<u8>,
+) {
     assert!(buf.len() == data.len() * 4);
     for (i, val) in data.iter().enumerate() {
         let j = i * 4;
@@ -253,7 +269,11 @@ impl AnimState {
             self.current_matrix = &self.keys[i] * &self.current_matrix;
             self.current_index += 1;
             let gradient = self.fetch_gradient();
-            render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
+            render_image_mut(
+                &gradient,
+                &self.current_matrix,
+                &mut self.image_data,
+            );
         }
     }
 
@@ -264,7 +284,11 @@ impl AnimState {
             let inv = self.keys[i].clone().try_inverse().unwrap();
             self.current_matrix = inv * &self.current_matrix;
             let gradient = self.fetch_gradient();
-            render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
+            render_image_mut(
+                &gradient,
+                &self.current_matrix,
+                &mut self.image_data,
+            );
         }
     }
 
