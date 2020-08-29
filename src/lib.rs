@@ -2,10 +2,16 @@ mod utils;
 
 use rand::prelude::*;
 
+use std::time::Duration;
+
+use std::thread;
+
 // use nalgebra as na;
 use nalgebra::{DMatrix, DVector, Matrix, Unit};
 
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
+
+use wasm_bindgen_futures::spawn_local;
 
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
@@ -55,6 +61,44 @@ extern "C" {
         height: usize,
         ctx: &CanvasRenderingContext2d,
     );
+
+    fn play_forward(state: AnimState, millis: u32) -> i32;
+}
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_name = setInterval)]
+    fn set_interval(closure: &Closure<dyn FnMut()>, time: u32) -> i32;
+
+    #[wasm_bindgen(js_name = clearInterval)]
+    fn clear_interval(handle: i32);
+}
+
+#[wasm_bindgen]
+pub struct Interval {
+    handle: i32,
+    _closure: Closure<dyn FnMut()>,
+}
+
+impl Interval {
+    pub fn new<F>(millis: u32, f: F) -> Interval
+    where
+        F: FnMut() + 'static,
+    {
+        let _closure = Closure::wrap(Box::new(f) as Box<dyn FnMut()>);
+        let handle = set_interval(&_closure, millis);
+        Interval { _closure, handle }
+    }
+
+    pub fn handle(&self) -> i32 {
+        self.handle
+    }
+}
+
+impl Drop for Interval {
+    fn drop(&mut self) {
+        clear_interval(self.handle);
+    }
 }
 
 fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
@@ -110,13 +154,23 @@ pub fn new_canvas(
     Ok(canvas)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 enum PlayState {
     PlayForward(i32),
     PauseForward,
     PlayReverse(i32),
     PauseReverse,
 }
+
+fn cancel_timeout(handle: i32) {
+    let window = web_sys::window().unwrap();
+    window.clear_timeout_with_handle(handle);
+}
+
+// fn set_timeout<F: FnOnce()>(f: timeout: i32) -> i32 {
+//     let window = web_sys::window().unwrap();
+//     window.
+// }
 
 impl PlayState {
     fn is_stopped(&self) -> bool {
@@ -145,23 +199,52 @@ impl PlayState {
         }
     }
 
-    fn pause(&self) -> Self {
+    fn pause(self) -> Self {
         use PlayState::*;
         match self {
-            PlayForward(id) => PauseForward,
-            PlayReverse(id) => PauseReverse,
-            x => *x,
+            PlayForward(id) => {
+                cancel_timeout(id);
+                PauseForward
+            }
+            PlayReverse(id) => {
+                cancel_timeout(id);
+                PauseReverse
+            }
+            x => x,
         }
     }
 
-    fn play(&self, callback_id: i32) -> Self {
+    fn play(self, callback_id: i32) -> Self {
         if self.is_forward() {
             PlayState::PlayForward(callback_id)
         } else {
             PlayState::PlayReverse(callback_id)
         }
     }
+
+    /*
+    fn play_forward<F>(&self, f: F) -> Self
+    where
+        F: FnOnce(),
+    {
+
+    }
+        */
 }
+
+async fn delay_log_impl(text: String, millis: u32) {
+    // let dur = Duration::from_millis(millis as u64);
+    let dur = Duration::from_millis(500);
+    // thread::sleep(dur);
+    log!("{}", text);
+}
+
+// #[wasm_bindgen]
+// pub fn delay_log(text: String, millis: u32) {
+//     let cb = Closure::wrap
+//     // spawn_local(delay_log_impl(text, millis));
+//     // log!("after spawn");
+// }
 
 #[wasm_bindgen]
 pub struct AnimState {
@@ -173,6 +256,7 @@ pub struct AnimState {
     image_data: Vec<u8>,
     gradient: String,
     play_state: PlayState,
+    interval: Option<Interval>,
 }
 
 fn render_image_mut(
@@ -225,7 +309,12 @@ impl AnimState {
             image_data,
             gradient,
             play_state,
+            interval: None,
         }
+    }
+
+    pub fn temp_play(&self) {
+        let interval = play_forward(self, 500);
     }
 
     fn fetch_gradient(&self) -> Gradient {

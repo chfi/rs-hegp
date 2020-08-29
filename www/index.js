@@ -33,6 +33,8 @@ const main = (dataWidth, dataHeight) => {
   window.animState = animState;
   window.next = next;
   window.prev = prev;
+
+  // window.delay_log = wasm.delay_log;
 };
 
 main(10, 10);
