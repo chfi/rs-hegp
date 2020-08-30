@@ -1,6 +1,7 @@
 import * as wasm from "hegp-rust-anim";
 import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
+
 const main = (dataWidth, dataHeight) => {
   let mat_size = { width: dataWidth, height: dataHeight };
   let animState = wasm.AnimState.init(mat_size.width, mat_size.height, 5);
@@ -28,13 +29,41 @@ const main = (dataWidth, dataHeight) => {
     draw();
   };
 
+  let interval_delay = 1000;
+  let interval_handle = null;
+
+  const play_forward = () => {
+    pause();
+    next();
+    let handle = setInterval(() => {
+      next();
+    }, interval_delay);
+    interval_handle = handle;
+  };
+
+  const play_reverse = () => {
+    pause();
+    prev();
+    let handle = setInterval(() => {
+      prev();
+    }, interval_delay);
+    interval_handle = handle;
+  }
+
+  const pause = () => {
+    clearInterval(interval_handle);
+    interval_handle = null;
+  };
+
   draw();
 
   window.animState = animState;
   window.next = next;
   window.prev = prev;
 
-  // window.delay_log = wasm.delay_log;
+  window.play_forward = play_forward;
+  window.play_reverse = play_reverse;
+  window.pause = pause;
 };
 
 main(10, 10);

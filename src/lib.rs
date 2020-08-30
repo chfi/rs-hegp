@@ -61,8 +61,6 @@ extern "C" {
         height: usize,
         ctx: &CanvasRenderingContext2d,
     );
-
-    fn play_forward(state: AnimState, millis: u32) -> i32;
 }
 
 #[wasm_bindgen]
@@ -154,23 +152,13 @@ pub fn new_canvas(
     Ok(canvas)
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum PlayState {
     PlayForward(i32),
     PauseForward,
     PlayReverse(i32),
     PauseReverse,
 }
-
-fn cancel_timeout(handle: i32) {
-    let window = web_sys::window().unwrap();
-    window.clear_timeout_with_handle(handle);
-}
-
-// fn set_timeout<F: FnOnce()>(f: timeout: i32) -> i32 {
-//     let window = web_sys::window().unwrap();
-//     window.
-// }
 
 impl PlayState {
     fn is_stopped(&self) -> bool {
@@ -181,7 +169,7 @@ impl PlayState {
         !self.is_stopped()
     }
 
-    fn callback_id(&self) -> Option<i32> {
+    fn handle(&self) -> Option<i32> {
         use PlayState::*;
         match self {
             PlayForward(id) => Some(*id),
@@ -199,37 +187,45 @@ impl PlayState {
         }
     }
 
-    fn pause(self) -> Self {
+    fn pause(&mut self) {
         use PlayState::*;
         match self {
             PlayForward(id) => {
-                cancel_timeout(id);
-                PauseForward
+                clear_interval(*id);
+                *self = PauseForward;
             }
             PlayReverse(id) => {
-                cancel_timeout(id);
-                PauseReverse
+                clear_interval(*id);
+                *self = PauseReverse;
             }
-            x => x,
+            _ => (),
         }
     }
 
-    fn play(self, callback_id: i32) -> Self {
+    fn play(self, handle: i32) -> Self {
+        if let Some(old_handle) = self.handle() {
+            clear_interval(old_handle);
+        }
         if self.is_forward() {
-            PlayState::PlayForward(callback_id)
+            PlayState::PlayForward(handle)
         } else {
-            PlayState::PlayReverse(callback_id)
+            PlayState::PlayReverse(handle)
         }
     }
 
-    /*
-    fn play_forward<F>(&self, f: F) -> Self
-    where
-        F: FnOnce(),
-    {
-
+    fn play_forward(&mut self, handle: i32) {
+        if let Some(old_handle) = self.handle() {
+            clear_interval(old_handle);
+        }
+        *self = PlayState::PlayForward(handle);
     }
-        */
+
+    fn play_reverse(self, handle: i32) -> Self {
+        if let Some(old_handle) = self.handle() {
+            clear_interval(old_handle);
+        }
+        PlayState::PlayReverse(handle)
+    }
 }
 
 async fn delay_log_impl(text: String, millis: u32) {
@@ -294,9 +290,8 @@ impl AnimState {
             height: rows,
         };
 
-        let gradient = "TURBO".to_string();
-
-        let image_data = render_image(&TURBO, &current_matrix);
+        let gradient = "PLASMA".to_string();
+        let image_data = render_image(&PLASMA, &current_matrix);
 
         let play_state = PlayState::PauseForward;
 
@@ -313,10 +308,6 @@ impl AnimState {
         }
     }
 
-    pub fn temp_play(&self) {
-        let interval = play_forward(self, 500);
-    }
-
     fn fetch_gradient(&self) -> Gradient {
         let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
             gradient
@@ -330,7 +321,7 @@ impl AnimState {
         if GRADIENT_NAMES.contains(&name) {
             self.gradient = name.to_string();
         } else {
-            self.gradient = "TURBO".to_string();
+            self.gradient = "PLASMA".to_string();
         }
     }
 
@@ -340,13 +331,21 @@ impl AnimState {
     }
 
     pub fn pause(&mut self) {
-        // TODO handle actually removing the callback
-        if self.play_state.is_playing() {}
+        self.play_state.pause();
     }
 
-    pub fn play_forward(&mut self) {
-        // TODO handle removing the callback if applicable
-        // TODO add the animation callback
+    pub fn play(&mut self, handle: i32) {
+        let play_state = self.play_state.play(handle);
+        self.play_state = play_state;
+    }
+
+    pub fn play_forward(&mut self, handle: i32) {
+        self.play_state.play_forward(handle);
+    }
+
+    pub fn play_reverse(&mut self, handle: i32) {
+        let play_state = self.play_state.play_reverse(handle);
+        self.play_state = play_state;
     }
 
     pub fn next_step(&mut self) {

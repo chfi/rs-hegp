@@ -6,11 +6,3 @@ export function render(animData, width, height, ctx) {
   }
   ctx.putImageData(imgData, 0, 0);
 }
-
-export function play_forward(animState, millis) {
-  let handle = setInterval(() => {
-    animState.next_step();
-  }, millis);
-
-  return millis;
-}
