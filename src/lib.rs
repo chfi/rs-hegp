@@ -4,14 +4,10 @@ use rand::prelude::*;
 
 use std::time::Duration;
 
-use std::thread;
-
 // use nalgebra as na;
 use nalgebra::{DMatrix, DVector, Matrix, Unit};
 
 use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
-
-use wasm_bindgen_futures::spawn_local;
 
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
@@ -152,6 +148,7 @@ pub fn new_canvas(
     Ok(canvas)
 }
 
+/*
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum PlayState {
     PlayForward(i32),
@@ -227,20 +224,7 @@ impl PlayState {
         PlayState::PlayReverse(handle)
     }
 }
-
-async fn delay_log_impl(text: String, millis: u32) {
-    // let dur = Duration::from_millis(millis as u64);
-    let dur = Duration::from_millis(500);
-    // thread::sleep(dur);
-    log!("{}", text);
-}
-
-// #[wasm_bindgen]
-// pub fn delay_log(text: String, millis: u32) {
-//     let cb = Closure::wrap
-//     // spawn_local(delay_log_impl(text, millis));
-//     // log!("after spawn");
-// }
+*/
 
 #[wasm_bindgen]
 pub struct AnimState {
@@ -251,8 +235,6 @@ pub struct AnimState {
     pub current_index: usize,
     image_data: Vec<u8>,
     gradient: String,
-    play_state: PlayState,
-    interval: Option<Interval>,
 }
 
 fn render_image_mut(
@@ -293,8 +275,6 @@ impl AnimState {
         let gradient = "PLASMA".to_string();
         let image_data = render_image(&PLASMA, &current_matrix);
 
-        let play_state = PlayState::PauseForward;
-
         AnimState {
             keys,
             data_size,
@@ -303,8 +283,6 @@ impl AnimState {
             current_index,
             image_data,
             gradient,
-            play_state,
-            interval: None,
         }
     }
 
@@ -328,24 +306,6 @@ impl AnimState {
     pub fn render(&self, ctx: &CanvasRenderingContext2d) {
         let bytes = self.image_data.as_slice();
         render(bytes, self.data_size.width, self.data_size.height, ctx);
-    }
-
-    pub fn pause(&mut self) {
-        self.play_state.pause();
-    }
-
-    pub fn play(&mut self, handle: i32) {
-        let play_state = self.play_state.play(handle);
-        self.play_state = play_state;
-    }
-
-    pub fn play_forward(&mut self, handle: i32) {
-        self.play_state.play_forward(handle);
-    }
-
-    pub fn play_reverse(&mut self, handle: i32) {
-        let play_state = self.play_state.play_reverse(handle);
-        self.play_state = play_state;
     }
 
     pub fn next_step(&mut self) {
