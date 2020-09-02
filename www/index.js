@@ -30,6 +30,12 @@ const main = (dataWidth, dataHeight) => {
   };
 
   let interval_delay = 1000;
+  const reset = () => {
+    pause();
+    animState.reset();
+    draw();
+  }
+
   let interval_handle = null;
 
   const play_forward = () => {

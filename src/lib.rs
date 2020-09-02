@@ -286,6 +286,13 @@ impl AnimState {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.current_matrix = self.plaintext.clone();
+        self.current_index = 0;
+        let gradient = self.fetch_gradient();
+        render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
+    }
+
     fn fetch_gradient(&self) -> Gradient {
         let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
             gradient
