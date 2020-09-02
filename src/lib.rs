@@ -2,7 +2,7 @@ mod utils;
 
 use rand::prelude::*;
 
-use nalgebra::DMatrix;
+use nalgebra::{DMatrix, DVector, RowDVector};
 
 use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
 
@@ -12,6 +12,13 @@ use colorous::{
     Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS,
     WARM,
 };
+
+#[allow(unused_macros)]
+macro_rules! log {
+    ( $( $t:tt )*) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
 
 static GRADIENT_NAMES: [&str; 9] = [
     "CIVIDIS",
@@ -40,11 +47,57 @@ fn pick_gradient(name: &str) -> Option<Gradient> {
     }
 }
 
-#[allow(unused_macros)]
-macro_rules! log {
-    ( $( $t:tt )*) => {
-        web_sys::console::log_1(&format!( $( $t )* ).into());
-    }
+fn load_csv(string: &str) -> DMatrix<f32> {
+    // let lines: Vec<_> = bytes.split(|b| b == &b'\n').collect();
+    // let lines: Vec<&[u8]> = bytes.split(|b| b == &b'\n').collect();
+    // let rows: Vec<&[u8]> = bytes
+    // let lines: Vec<&[u8]> = bytes.split(|b| b == &b'\n').collect();
+    /*
+    let lines: Vec<Vec<f32>> = bytes
+        .split(|b| b == &b'\n')
+        .map(|bs| {
+            let line: Vec<_> = bs.split(|b| b == &b',').collect();
+        })
+        .collect();
+    */
+    let mut lines_iter = string.split(|b| b == '\n');
+    let header = lines_iter.next().unwrap();
+    let cols = header.len();
+
+    log!("building rows");
+    let rows: Vec<RowDVector<f32>> = lines_iter
+        .enumerate()
+        .filter_map(|(i, bs)| {
+            // log!("splitting line {:?}", bs);
+            let line: Vec<_> = bs.split(|b| b == ',').collect();
+            // log!("line length {}", line.len());
+            if line.len() <= 1 {
+                // log!("{:?} is empty", bs);
+                None
+            } else {
+                let len = line.len();
+                Some(RowDVector::from_iterator(
+                    len,
+                    line.iter().map(|s| s.parse::<f32>().unwrap()),
+                ))
+            }
+            // .collect()
+        })
+        // .map(|b| {
+        //     let s = std::str::from_utf8(b).unwrap();
+        //     s.parse().unwrap()
+        // })
+        .collect();
+    log!("bulding matrix");
+    let matrix = DMatrix::from_rows(rows.as_slice());
+    // let matrix = DMatrix::from_rows(&
+    // let mut matrix: DMatrix<f32> =
+    //     DMatrix::from_iterator(bytes.into_iter().map(|b| {
+    //         let s = std::str::from_utf8(b).unwrap();
+    //         s.parse().unwrap()
+    //     }));
+    // let mut matrix
+    matrix
 }
 
 #[wasm_bindgen(module = "/js/util.js")]
@@ -154,7 +207,40 @@ fn render_image_mut(
 
 #[wasm_bindgen]
 impl AnimState {
-    pub fn init(rows: usize, cols: usize, num_keys: usize) -> Self {
+    pub fn init_bxd_chr1(num_keys: usize) -> Self {
+        let plaintext = load_csv(include_str!("../chr1_sm.csv"));
+        let (rows, cols) = plaintext.shape();
+
+        let keys: Vec<_> = generate_key_series(rows, num_keys);
+        let total_key = keys
+            .iter()
+            .fold(DMatrix::identity(rows, rows), |a, b| a * b);
+
+        // let plaintext = generate_plaintext(rows, cols);
+        let ciphertext = total_key * &plaintext;
+        let current_matrix = plaintext.clone();
+        let current_index = 0;
+        let data_size = Size {
+            width: cols,
+            height: rows,
+        };
+
+        let gradient = "PLASMA".to_string();
+        let image_data = render_image_new(&PLASMA, &current_matrix);
+
+        AnimState {
+            keys,
+            data_size,
+            plaintext,
+            ciphertext,
+            current_matrix,
+            current_index,
+            image_data,
+            gradient,
+        }
+    }
+
+    pub fn init_random(rows: usize, cols: usize, num_keys: usize) -> Self {
         let keys: Vec<_> = generate_key_series(rows, num_keys);
         let total_key = keys
             .iter()

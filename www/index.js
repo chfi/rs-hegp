@@ -22,8 +22,10 @@ const readRange = () => {
 
 
 const main = (dataWidth, dataHeight, numKeys) => {
-  let mat_size = { width: dataWidth, height: dataHeight };
-  let animState = wasm.AnimState.init(mat_size.width, mat_size.height, numKeys);
+  let animState = wasm.AnimState.init_bxd_chr1(numKeys);
+  // let mat_size = animState.size();
+  // let mat_size = { width: dataWidth, height: dataHeight };
+  // let animState = wasm.AnimState.init(mat_size.width, mat_size.height, numKeys);
   let dataSize = animState.size();
 
   let ctx = canvas.getContext("2d");
