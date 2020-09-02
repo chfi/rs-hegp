@@ -1,8 +1,12 @@
 import * as wasm from "hegp-rust-anim";
 import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
+const DELAY = 150;
 
-const main = (dataWidth, dataHeight) => {
+const DATA_COLS = 10;
+const DATA_ROWS = 10;
+const NKEYS = 30;
+
 const canvas = document.getElementById("canvas");
 const forwardButton = document.getElementById("forward");
 const reverseButton = document.getElementById("reverse");
@@ -11,10 +15,10 @@ const resetButton = document.getElementById("reset");
 const prevButton = document.getElementById("prev");
 const nextButton = document.getElementById("next");
 
+const main = (dataWidth, dataHeight, numKeys) => {
   let mat_size = { width: dataWidth, height: dataHeight };
-  let animState = wasm.AnimState.init(mat_size.width, mat_size.height, 5);
+  let animState = wasm.AnimState.init(mat_size.width, mat_size.height, numKeys);
 
-  let canvas = document.getElementById("canvas");
   let ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
@@ -37,7 +41,6 @@ const nextButton = document.getElementById("next");
     draw();
   };
 
-  let interval_delay = 1000;
   const reset = () => {
     pause();
     animState.reset();
@@ -51,7 +54,7 @@ const nextButton = document.getElementById("next");
     next();
     let handle = setInterval(() => {
       next();
-    }, interval_delay);
+    }, DELAY);
     interval_handle = handle;
   };
 
@@ -60,7 +63,7 @@ const nextButton = document.getElementById("next");
     prev();
     let handle = setInterval(() => {
       prev();
-    }, interval_delay);
+    }, DELAY);
     interval_handle = handle;
   }
 
@@ -89,4 +92,4 @@ const nextButton = document.getElementById("next");
   window.pause = pause;
 };
 
-main(10, 10);
+main(DATA_COLS, DATA_ROWS, NKEYS);
