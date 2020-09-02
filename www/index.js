@@ -3,6 +3,14 @@ import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
 
 const main = (dataWidth, dataHeight) => {
+const canvas = document.getElementById("canvas");
+const forwardButton = document.getElementById("forward");
+const reverseButton = document.getElementById("reverse");
+const stopButton = document.getElementById("stop");
+const resetButton = document.getElementById("reset");
+const prevButton = document.getElementById("prev");
+const nextButton = document.getElementById("next");
+
   let mat_size = { width: dataWidth, height: dataHeight };
   let animState = wasm.AnimState.init(mat_size.width, mat_size.height, 5);
 
@@ -62,6 +70,15 @@ const main = (dataWidth, dataHeight) => {
   };
 
   draw();
+
+
+  forwardButton.addEventListener("click", play_forward);
+  reverseButton.addEventListener("click", play_reverse);
+  stopButton.addEventListener("click", pause);
+  resetButton.addEventListener("click", reset);
+  nextButton.addEventListener("click", next);
+  prevButton.addEventListener("click", prev);
+
 
   window.animState = animState;
   window.next = next;
