@@ -1,8 +1,6 @@
 import * as wasm from "hegp-rust-anim";
 import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
-const DELAY = 150;
-
 const DATA_COLS = 10;
 const DATA_ROWS = 10;
 const NKEYS = 30;
@@ -12,8 +10,16 @@ const forwardButton = document.getElementById("forward");
 const reverseButton = document.getElementById("reverse");
 const stopButton = document.getElementById("stop");
 const resetButton = document.getElementById("reset");
+const endButton = document.getElementById("end");
 const prevButton = document.getElementById("prev");
 const nextButton = document.getElementById("next");
+
+const delayRange = document.getElementById("delay");
+
+const readRange = () => {
+  return delayRange.valueAsNumber;
+};
+
 
 const main = (dataWidth, dataHeight, numKeys) => {
   let mat_size = { width: dataWidth, height: dataHeight };
@@ -48,6 +54,12 @@ const main = (dataWidth, dataHeight, numKeys) => {
     draw();
   };
 
+  const gotoEnd = () => {
+    pause();
+    animState.goto_end();
+    draw();
+  };
+
   let interval_handle = null;
 
   const play_forward = () => {
@@ -55,7 +67,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
     next();
     let handle = setInterval(() => {
       next();
-    }, DELAY);
+    }, readRange());
     interval_handle = handle;
   };
 
@@ -64,7 +76,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
     prev();
     let handle = setInterval(() => {
       prev();
-    }, DELAY);
+    }, readRange());
     interval_handle = handle;
   }
 
@@ -80,6 +92,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
   reverseButton.addEventListener("click", play_reverse);
   stopButton.addEventListener("click", pause);
   resetButton.addEventListener("click", reset);
+  endButton.addEventListener("click", gotoEnd);
   nextButton.addEventListener("click", next);
   prevButton.addEventListener("click", prev);
 
@@ -91,6 +104,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
   window.play_forward = play_forward;
   window.play_reverse = play_reverse;
   window.pause = pause;
+  window.readRange = readRange;
 };
 
 main(DATA_COLS, DATA_ROWS, NKEYS);

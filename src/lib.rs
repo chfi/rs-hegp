@@ -153,6 +153,7 @@ pub struct AnimState {
     keys: Vec<DMatrix<f32>>,
     data_size: Size,
     plaintext: DMatrix<f32>,
+    ciphertext: DMatrix<f32>,
     current_matrix: DMatrix<f32>,
     pub current_index: usize,
     image_data: Vec<u8>,
@@ -184,8 +185,12 @@ fn render_image_mut(
 #[wasm_bindgen]
 impl AnimState {
     pub fn init(rows: usize, cols: usize, num_keys: usize) -> Self {
-        let keys = gen_key_series(rows, num_keys);
+        let keys: Vec<_> = gen_key_series(rows, num_keys);
+        let total_key = keys
+            .iter()
+            .fold(DMatrix::identity(rows, cols), |a, b| a * b);
         let plaintext = gen_plaintext(rows, cols);
+        let ciphertext = total_key * &plaintext;
         let current_matrix = plaintext.clone();
         let current_index = 0;
         let data_size = Size {
@@ -200,6 +205,7 @@ impl AnimState {
             keys,
             data_size,
             plaintext,
+            ciphertext,
             current_matrix,
             current_index,
             image_data,
@@ -235,6 +241,10 @@ impl AnimState {
         self.render_bytes();
     }
 
+    pub fn goto_end(&mut self) {
+        self.current_matrix = self.ciphertext.clone();
+        self.current_index = self.keys.len() - 1;
+        self.render_bytes();
     }
 
     pub fn draw(&self, ctx: &CanvasRenderingContext2d) {
