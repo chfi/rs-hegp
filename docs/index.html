@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>HEGP animation</title>
+  </head>
+  <body>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+    <div id="container">
+      <canvas id="canvas" width=500 height=500></canvas>
+      <button id="reverse">Reverse</button>
+      <button id="stop">Stop</button>
+      <button id="forward">Forward</button>
+      <button id="reset">Reset</button>
+      <button id="end">Goto end</button>
+      <button id="prev">Prev</button>
+      <button id="next">Next</button>
+      <input type="range" id="delay" name="delay"
+             min="10" max="100" value="20">
+      <label for="delay">Animation Delay</label>
+    </div>
+    <script src="./bootstrap.js"></script>
+  </body>
+</html>
