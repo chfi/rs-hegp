@@ -1,8 +1,7 @@
 Rust HEGP animation
 =========================
 
-
-Build the Rust library using wasm-pack from the repository root:
+Build the Rust library using [wasm-pack](https://rustwasm.github.io/wasm-pack/installer/) from the repository root:
 
 ```bash
 wasm-pack build
