@@ -20,13 +20,14 @@ const readRange = () => {
   return delayRange.valueAsNumber;
 };
 
-
-const main = (dataWidth, dataHeight, numKeys) => {
-  let animState = wasm.AnimState.init_bxd_chr1(numKeys);
+const initialize = (animState) => {
+  console.log("mat_size");
   let mat_size = animState.size();
 
+  // Comment the above and uncomment the following two lines to
   // let mat_size = { width: dataWidth, height: dataHeight };
   // let animState = wasm.AnimState.init_random(mat_size.width, mat_size.height, numKeys);
+
   let dataSize = animState.size();
 
   let ctx = canvas.getContext("2d");
@@ -131,4 +132,16 @@ const main = (dataWidth, dataHeight, numKeys) => {
   window.readRange = readRange;
 };
 
-main(DATA_COLS, DATA_ROWS, NKEYS);
+
+const mainBxd = (numKeys) => {
+  let animState = wasm.AnimState.init_bxd_chr1(numKeys);
+  initialize(animState);
+};
+
+const mainRandom = (dataWidth, dataHeight, numKeys) => {
+  let animState = wasm.AnimState.init_random(mat_size.width, mat_size.height, numKeys);
+  initialize(animState);
+};
+
+mainBxd(NKEYS);
+// mainRandom(DATA_COLS, DATA_ROWS, NKEYS);
