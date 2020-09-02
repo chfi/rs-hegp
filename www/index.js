@@ -18,16 +18,17 @@ const nextButton = document.getElementById("next");
 const main = (dataWidth, dataHeight, numKeys) => {
   let mat_size = { width: dataWidth, height: dataHeight };
   let animState = wasm.AnimState.init(mat_size.width, mat_size.height, numKeys);
+  let dataSize = animState.size();
 
   let ctx = canvas.getContext("2d");
   ctx.imageSmoothingEnabled = false;
 
-  let offscreen_canvas = wasm.new_canvas("offscreen", animState.width(), animState.height());
+  let offscreen_canvas = wasm.new_canvas("offscreen", dataSize.width, dataSize.height);
 
   let o_ctx = offscreen_canvas.getContext("2d");
 
   const draw = () => {
-    animState.render(o_ctx);
+    animState.draw(o_ctx);
     ctx.drawImage(offscreen_canvas, 0, 0, canvas.width, canvas.height);
   };
 
@@ -45,7 +46,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
     pause();
     animState.reset();
     draw();
-  }
+  };
 
   let interval_handle = null;
 

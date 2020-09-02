@@ -51,7 +51,7 @@ macro_rules! log {
 
 #[wasm_bindgen(module = "/js/util.js")]
 extern "C" {
-    fn render(
+    fn draw_bytes_to_canvas(
         img_bytes: &[u8],
         width: usize,
         height: usize,
@@ -148,84 +148,6 @@ pub fn new_canvas(
     Ok(canvas)
 }
 
-/*
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum PlayState {
-    PlayForward(i32),
-    PauseForward,
-    PlayReverse(i32),
-    PauseReverse,
-}
-
-impl PlayState {
-    fn is_stopped(&self) -> bool {
-        *self == PlayState::PauseForward || *self == PlayState::PauseReverse
-    }
-
-    fn is_playing(&self) -> bool {
-        !self.is_stopped()
-    }
-
-    fn handle(&self) -> Option<i32> {
-        use PlayState::*;
-        match self {
-            PlayForward(id) => Some(*id),
-            PlayReverse(id) => Some(*id),
-            _ => None,
-        }
-    }
-
-    fn is_forward(&self) -> bool {
-        use PlayState::*;
-        match self {
-            PlayForward(_) => true,
-            PauseForward => true,
-            _ => false,
-        }
-    }
-
-    fn pause(&mut self) {
-        use PlayState::*;
-        match self {
-            PlayForward(id) => {
-                clear_interval(*id);
-                *self = PauseForward;
-            }
-            PlayReverse(id) => {
-                clear_interval(*id);
-                *self = PauseReverse;
-            }
-            _ => (),
-        }
-    }
-
-    fn play(self, handle: i32) -> Self {
-        if let Some(old_handle) = self.handle() {
-            clear_interval(old_handle);
-        }
-        if self.is_forward() {
-            PlayState::PlayForward(handle)
-        } else {
-            PlayState::PlayReverse(handle)
-        }
-    }
-
-    fn play_forward(&mut self, handle: i32) {
-        if let Some(old_handle) = self.handle() {
-            clear_interval(old_handle);
-        }
-        *self = PlayState::PlayForward(handle);
-    }
-
-    fn play_reverse(self, handle: i32) -> Self {
-        if let Some(old_handle) = self.handle() {
-            clear_interval(old_handle);
-        }
-        PlayState::PlayReverse(handle)
-    }
-}
-*/
-
 #[wasm_bindgen]
 pub struct AnimState {
     keys: Vec<DMatrix<f32>>,
@@ -237,6 +159,12 @@ pub struct AnimState {
     gradient: String,
 }
 
+fn render_image(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
+    let mut result = vec![0; data.len() * 4];
+    render_image_mut(gradient, data, &mut result);
+    result
+}
+
 fn render_image_mut(
     gradient: &Gradient,
     data: &DMatrix<f32>,
@@ -245,19 +173,12 @@ fn render_image_mut(
     assert!(buf.len() == data.len() * 4);
     for (i, val) in data.iter().enumerate() {
         let j = i * 4;
-        // let t: colorous::Gradient = TURBO;
         let color = gradient.eval_continuous(*val as f64);
         buf[j] = color.r;
         buf[j + 1] = color.g;
         buf[j + 2] = color.b;
         buf[j + 3] = 255;
     }
-}
-
-fn render_image(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
-    let mut result = vec![0; data.len() * 4];
-    render_image_mut(gradient, data, &mut result);
-    result
 }
 
 #[wasm_bindgen]
@@ -286,22 +207,6 @@ impl AnimState {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.current_matrix = self.plaintext.clone();
-        self.current_index = 0;
-        let gradient = self.fetch_gradient();
-        render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
-    }
-
-    fn fetch_gradient(&self) -> Gradient {
-        let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
-            gradient
-        } else {
-            TURBO
-        };
-        gradient
-    }
-
     pub fn set_gradient(&mut self, name: &str) {
         if GRADIENT_NAMES.contains(&name) {
             self.gradient = name.to_string();
@@ -310,9 +215,36 @@ impl AnimState {
         }
     }
 
-    pub fn render(&self, ctx: &CanvasRenderingContext2d) {
+    fn gradient(&self) -> Gradient {
+        let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
+            gradient
+        } else {
+            TURBO
+        };
+        gradient
+    }
+
+    pub fn render_bytes(&mut self) {
+        let gradient = self.gradient();
+        render_image_mut(&gradient, &self.current_matrix, &mut self.image_data);
+    }
+
+    pub fn reset(&mut self) {
+        self.current_matrix = self.plaintext.clone();
+        self.current_index = 0;
+        self.render_bytes();
+    }
+
+    }
+
+    pub fn draw(&self, ctx: &CanvasRenderingContext2d) {
         let bytes = self.image_data.as_slice();
-        render(bytes, self.data_size.width, self.data_size.height, ctx);
+        draw_bytes_to_canvas(
+            bytes,
+            self.data_size.width,
+            self.data_size.height,
+            ctx,
+        );
     }
 
     pub fn next_step(&mut self) {
@@ -323,12 +255,7 @@ impl AnimState {
             let i = self.current_index;
             self.current_matrix = &self.keys[i] * &self.current_matrix;
             self.current_index += 1;
-            let gradient = self.fetch_gradient();
-            render_image_mut(
-                &gradient,
-                &self.current_matrix,
-                &mut self.image_data,
-            );
+            self.render_bytes();
         }
     }
 
@@ -338,21 +265,8 @@ impl AnimState {
             let i = self.current_index;
             let inv = self.keys[i].clone().try_inverse().unwrap();
             self.current_matrix = inv * &self.current_matrix;
-            let gradient = self.fetch_gradient();
-            render_image_mut(
-                &gradient,
-                &self.current_matrix,
-                &mut self.image_data,
-            );
+            self.render_bytes();
         }
-    }
-
-    pub fn width(&self) -> usize {
-        self.data_size.width
-    }
-
-    pub fn height(&self) -> usize {
-        self.data_size.height
     }
 
     pub fn size(&self) -> Size {
