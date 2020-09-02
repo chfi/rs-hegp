@@ -78,7 +78,10 @@ fn load_csv(string: &str) -> DMatrix<f32> {
                 let len = line.len();
                 Some(RowDVector::from_iterator(
                     len,
-                    line.iter().map(|s| s.parse::<f32>().unwrap()),
+                    line.iter().map(|s| {
+                        let val = s.parse::<f32>().unwrap();
+                        val / 2.0
+                    }),
                 ))
             }
             // .collect()
@@ -185,6 +188,7 @@ pub struct AnimState {
 }
 
 fn render_image_new(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
+    log!("data len: {}", data.len());
     let mut result = vec![255; data.len() * 4];
     render_image_mut(gradient, data, &mut result);
     result
@@ -196,7 +200,8 @@ fn render_image_mut(
     buf: &mut Vec<u8>,
 ) {
     assert!(buf.len() == data.len() * 4);
-    for (i, val) in data.iter().enumerate() {
+    let transposed = data.transpose();
+    for (i, val) in transposed.iter().enumerate() {
         let j = i * 4;
         let color = gradient.eval_continuous(*val as f64);
         buf[j] = color.r;
@@ -210,11 +215,12 @@ impl AnimState {
     pub fn init_bxd_chr1(num_keys: usize) -> Self {
         let plaintext = load_csv(include_str!("../chr1_sm.csv"));
         let (rows, cols) = plaintext.shape();
+        log!("plaintext shape: {}, {}", rows, cols);
 
         let keys: Vec<_> = generate_key_series(rows, num_keys);
         let total_key = keys
             .iter()
-            .fold(DMatrix::identity(rows, rows), |a, b| a * b);
+            .fold(DMatrix::identity(rows, rows), |a, b| b * a);
 
         // let plaintext = generate_plaintext(rows, cols);
         let ciphertext = total_key * &plaintext;
@@ -244,7 +250,7 @@ impl AnimState {
         let keys: Vec<_> = generate_key_series(rows, num_keys);
         let total_key = keys
             .iter()
-            .fold(DMatrix::identity(rows, cols), |a, b| a * b);
+            .fold(DMatrix::identity(rows, rows), |a, b| b * a);
         let plaintext = generate_plaintext(rows, cols);
         let ciphertext = total_key * &plaintext;
         let current_matrix = plaintext.clone();

@@ -1,9 +1,9 @@
 import * as wasm from "hegp-rust-anim";
 import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
-const DATA_COLS = 10;
-const DATA_ROWS = 10;
-const NKEYS = 100;
+const DATA_COLS = 100;
+const DATA_ROWS = 50;
+const NKEYS = 500;
 
 const canvas = document.getElementById("canvas");
 const forwardButton = document.getElementById("forward");
@@ -23,9 +23,10 @@ const readRange = () => {
 
 const main = (dataWidth, dataHeight, numKeys) => {
   let animState = wasm.AnimState.init_bxd_chr1(numKeys);
-  // let mat_size = animState.size();
+  let mat_size = animState.size();
+
   // let mat_size = { width: dataWidth, height: dataHeight };
-  // let animState = wasm.AnimState.init(mat_size.width, mat_size.height, numKeys);
+  // let animState = wasm.AnimState.init_random(mat_size.width, mat_size.height, numKeys);
   let dataSize = animState.size();
 
   let ctx = canvas.getContext("2d");
@@ -99,8 +100,14 @@ const main = (dataWidth, dataHeight, numKeys) => {
   stopButton.addEventListener("click", pause);
   resetButton.addEventListener("click", reset);
   endButton.addEventListener("click", gotoEnd);
-  nextButton.addEventListener("click", next);
-  prevButton.addEventListener("click", prev);
+  nextButton.addEventListener("click", ev => {
+    pause();
+    next();
+  });
+  prevButton.addEventListener("click", ev => {
+    pause();
+    prev();
+  });
 
   delayRange.addEventListener("change", ev => {
     if (interval_handle !== null) {
