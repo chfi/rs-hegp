@@ -2,21 +2,18 @@ mod utils;
 
 use rand::prelude::*;
 
-use std::time::Duration;
-
-// use nalgebra as na;
-use nalgebra::{DMatrix, DVector, Matrix, Unit};
+use nalgebra::DMatrix;
 
 use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
 
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 use colorous::{
     Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS,
     WARM,
 };
 
-static GRADIENT_NAMES: [&'static str; 9] = [
+static GRADIENT_NAMES: [&str; 9] = [
     "CIVIDIS",
     "COOL",
     "CUBEHELIX",
@@ -43,6 +40,7 @@ fn pick_gradient(name: &str) -> Option<Gradient> {
     }
 }
 
+#[allow(unused_macros)]
 macro_rules! log {
     ( $( $t:tt )*) => {
         web_sys::console::log_1(&format!( $( $t )* ).into());
@@ -68,34 +66,7 @@ extern "C" {
     fn clear_interval(handle: i32);
 }
 
-#[wasm_bindgen]
-pub struct Interval {
-    handle: i32,
-    _closure: Closure<dyn FnMut()>,
-}
-
-impl Interval {
-    pub fn new<F>(millis: u32, f: F) -> Interval
-    where
-        F: FnMut() + 'static,
-    {
-        let _closure = Closure::wrap(Box::new(f) as Box<dyn FnMut()>);
-        let handle = set_interval(&_closure, millis);
-        Interval { _closure, handle }
-    }
-
-    pub fn handle(&self) -> i32 {
-        self.handle
-    }
-}
-
-impl Drop for Interval {
-    fn drop(&mut self) {
-        clear_interval(self.handle);
-    }
-}
-
-fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
+fn rotation_matrix(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
     assert!(dim > 0 && a < dim && b < dim && a != b);
     let mut mat = DMatrix::identity(dim, dim);
     mat[(a, a)] = angle.cos();
@@ -105,7 +76,7 @@ fn rotation_mat(dim: usize, angle: f32, a: usize, b: usize) -> DMatrix<f32> {
     mat
 }
 
-fn rand_rot_mat(dim: usize) -> DMatrix<f32> {
+fn random_rotation_matrix(dim: usize) -> DMatrix<f32> {
     assert!(dim > 0);
     let mut rng = thread_rng();
     let angle: f32 = rng.gen();
@@ -115,14 +86,14 @@ fn rand_rot_mat(dim: usize) -> DMatrix<f32> {
         b = rng.gen_range(0, dim);
     }
 
-    rotation_mat(dim, angle, a, b)
+    rotation_matrix(dim, angle, a, b)
 }
 
-fn gen_key_series(dim: usize, len: usize) -> Vec<DMatrix<f32>> {
-    (0..len).into_iter().map(|_| rand_rot_mat(dim)).collect()
+fn generate_key_series(dim: usize, len: usize) -> Vec<DMatrix<f32>> {
+    (0..len).map(|_| random_rotation_matrix(dim)).collect()
 }
 
-fn gen_plaintext(rows: usize, cols: usize) -> DMatrix<f32> {
+fn generate_plaintext(rows: usize, cols: usize) -> DMatrix<f32> {
     DMatrix::new_random(rows, cols)
 }
 
@@ -155,13 +126,13 @@ pub struct AnimState {
     plaintext: DMatrix<f32>,
     ciphertext: DMatrix<f32>,
     current_matrix: DMatrix<f32>,
-    pub current_index: usize,
+    current_index: usize,
     image_data: Vec<u8>,
     gradient: String,
 }
 
-fn render_image(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
-    let mut result = vec![0; data.len() * 4];
+fn render_image_new(gradient: &Gradient, data: &DMatrix<f32>) -> Vec<u8> {
+    let mut result = vec![255; data.len() * 4];
     render_image_mut(gradient, data, &mut result);
     result
 }
@@ -178,18 +149,17 @@ fn render_image_mut(
         buf[j] = color.r;
         buf[j + 1] = color.g;
         buf[j + 2] = color.b;
-        buf[j + 3] = 255;
     }
 }
 
 #[wasm_bindgen]
 impl AnimState {
     pub fn init(rows: usize, cols: usize, num_keys: usize) -> Self {
-        let keys: Vec<_> = gen_key_series(rows, num_keys);
+        let keys: Vec<_> = generate_key_series(rows, num_keys);
         let total_key = keys
             .iter()
             .fold(DMatrix::identity(rows, cols), |a, b| a * b);
-        let plaintext = gen_plaintext(rows, cols);
+        let plaintext = generate_plaintext(rows, cols);
         let ciphertext = total_key * &plaintext;
         let current_matrix = plaintext.clone();
         let current_index = 0;
@@ -199,7 +169,7 @@ impl AnimState {
         };
 
         let gradient = "PLASMA".to_string();
-        let image_data = render_image(&PLASMA, &current_matrix);
+        let image_data = render_image_new(&PLASMA, &current_matrix);
 
         AnimState {
             keys,
@@ -222,12 +192,11 @@ impl AnimState {
     }
 
     fn gradient(&self) -> Gradient {
-        let gradient = if let Some(gradient) = pick_gradient(&self.gradient) {
+        if let Some(gradient) = pick_gradient(&self.gradient) {
             gradient
         } else {
             TURBO
-        };
-        gradient
+        }
     }
 
     pub fn render_bytes(&mut self) {

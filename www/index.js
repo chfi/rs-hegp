@@ -3,7 +3,7 @@ import { memory } from "hegp-rust-anim/hegp_rust_anim_bg";
 
 const DATA_COLS = 10;
 const DATA_ROWS = 10;
-const NKEYS = 30;
+const NKEYS = 100;
 
 const canvas = document.getElementById("canvas");
 const forwardButton = document.getElementById("forward");
@@ -32,6 +32,8 @@ const main = (dataWidth, dataHeight, numKeys) => {
   let offscreen_canvas = wasm.new_canvas("offscreen", dataSize.width, dataSize.height);
 
   let o_ctx = offscreen_canvas.getContext("2d");
+
+  let forward = true;
 
   const draw = () => {
     animState.draw(o_ctx);
@@ -65,6 +67,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
   const play_forward = () => {
     pause();
     next();
+    forward = true;
     let handle = setInterval(() => {
       next();
     }, readRange());
@@ -74,6 +77,7 @@ const main = (dataWidth, dataHeight, numKeys) => {
   const play_reverse = () => {
     pause();
     prev();
+    forward = false;
     let handle = setInterval(() => {
       prev();
     }, readRange());
@@ -95,6 +99,17 @@ const main = (dataWidth, dataHeight, numKeys) => {
   endButton.addEventListener("click", gotoEnd);
   nextButton.addEventListener("click", next);
   prevButton.addEventListener("click", prev);
+
+  delayRange.addEventListener("change", ev => {
+    if (interval_handle !== null) {
+      clearInterval(interval_handle);
+      if (forward) {
+        play_forward();
+      } else {
+        play_reverse();
+      }
+    }
+  });
 
 
   window.animState = animState;
