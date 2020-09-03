@@ -181,8 +181,7 @@ fn render_image_mut(
 
 #[wasm_bindgen]
 impl AnimState {
-    pub fn init_bxd_chr1(num_keys: usize) -> Self {
-        let plaintext = load_csv(include_str!("../chr1_sm.csv"));
+    fn init_with_plaintext(plaintext: DMatrix<f32>, num_keys: usize) -> Self {
         let (rows, cols) = plaintext.shape();
         log!("plaintext shape: {}, {}", rows, cols);
 
@@ -215,33 +214,14 @@ impl AnimState {
         }
     }
 
+    pub fn init_bxd_chr1(num_keys: usize) -> Self {
+        let plaintext = load_csv(include_str!("../chr1_sm.csv"));
+        Self::init_with_plaintext(plaintext, num_keys)
+    }
+
     pub fn init_random(rows: usize, cols: usize, num_keys: usize) -> Self {
-        let keys: Vec<_> = generate_key_series(rows, num_keys);
-        let total_key = keys
-            .iter()
-            .fold(DMatrix::identity(rows, rows), |a, b| b * a);
         let plaintext = generate_plaintext(rows, cols);
-        let ciphertext = total_key * &plaintext;
-        let current_matrix = plaintext.clone();
-        let current_index = 0;
-        let data_size = Size {
-            width: cols,
-            height: rows,
-        };
-
-        let gradient = "PLASMA".to_string();
-        let image_data = render_image_new(&PLASMA, &current_matrix);
-
-        AnimState {
-            keys,
-            data_size,
-            plaintext,
-            ciphertext,
-            current_matrix,
-            current_index,
-            image_data,
-            gradient,
-        }
+        Self::init_with_plaintext(plaintext, num_keys)
     }
 
     pub fn set_gradient(&mut self, name: &str) {
@@ -273,7 +253,7 @@ impl AnimState {
 
     pub fn goto_end(&mut self) {
         self.current_matrix = self.ciphertext.clone();
-        self.current_index = self.keys.len() - 1;
+        self.current_index = self.keys.len();
         self.render_bytes();
     }
 
