@@ -201,8 +201,8 @@ impl AnimState {
             height: rows,
         };
 
-        let gradient = "SINEBOW".to_string();
-        let image_data = render_image_new(&SINEBOW, &current_matrix);
+        let gradient = "RAINBOW".to_string();
+        let image_data = render_image_new(&RAINBOW, &current_matrix);
 
         AnimState {
             keys,
@@ -230,7 +230,7 @@ impl AnimState {
         if GRADIENT_NAMES.contains(&name) {
             self.gradient = name.to_string();
         } else {
-            self.gradient = "PLASMA".to_string();
+            self.gradient = "RAINBOW".to_string();
         }
     }
 
@@ -238,7 +238,7 @@ impl AnimState {
         if let Some(gradient) = pick_gradient(&self.gradient) {
             gradient
         } else {
-            TURBO
+            RAINBOW
         }
     }
 
