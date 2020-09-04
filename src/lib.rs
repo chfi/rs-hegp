@@ -9,8 +9,8 @@ use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement};
 
 use colorous::{
-    Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, TURBO, VIRIDIS,
-    WARM,
+    Gradient, CIVIDIS, COOL, CUBEHELIX, INFERNO, MAGMA, PLASMA, RAINBOW,
+    SINEBOW, TURBO, VIRIDIS, WARM,
 };
 
 #[allow(unused_macros)]
@@ -20,7 +20,7 @@ macro_rules! log {
     }
 }
 
-static GRADIENT_NAMES: [&str; 9] = [
+static GRADIENT_NAMES: [&str; 11] = [
     "CIVIDIS",
     "COOL",
     "CUBEHELIX",
@@ -30,6 +30,8 @@ static GRADIENT_NAMES: [&str; 9] = [
     "TURBO",
     "VIRIDIS",
     "WARM",
+    "SINEBOW",
+    "RAINBOW",
 ];
 
 fn pick_gradient(name: &str) -> Option<Gradient> {
@@ -43,6 +45,8 @@ fn pick_gradient(name: &str) -> Option<Gradient> {
         "TURBO" => Some(TURBO),
         "VIRIDIS" => Some(VIRIDIS),
         "WARM" => Some(WARM),
+        "SINEBOW" => Some(SINEBOW),
+        "RAINBOW" => Some(RAINBOW),
         _ => None,
     }
 }
@@ -183,14 +187,12 @@ fn render_image_mut(
 impl AnimState {
     fn init_with_plaintext(plaintext: DMatrix<f32>, num_keys: usize) -> Self {
         let (rows, cols) = plaintext.shape();
-        log!("plaintext shape: {}, {}", rows, cols);
 
         let keys: Vec<_> = generate_key_series(rows, num_keys);
         let total_key = keys
             .iter()
             .fold(DMatrix::identity(rows, rows), |a, b| b * a);
 
-        // let plaintext = generate_plaintext(rows, cols);
         let ciphertext = total_key * &plaintext;
         let current_matrix = plaintext.clone();
         let current_index = 0;
@@ -199,8 +201,8 @@ impl AnimState {
             height: rows,
         };
 
-        let gradient = "PLASMA".to_string();
-        let image_data = render_image_new(&PLASMA, &current_matrix);
+        let gradient = "SINEBOW".to_string();
+        let image_data = render_image_new(&SINEBOW, &current_matrix);
 
         AnimState {
             keys,
